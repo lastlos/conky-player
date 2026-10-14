@@ -1,4 +1,7 @@
 require 'cairo'
+pcall(require, 'cairo_xlib')
+require 'imlib2'
+require 'cairo_imlib2_helper'
 
 local dir = os.getenv('CONKY_PLAYER_DIR') or (os.getenv('HOME') .. '/.config/conky-player')
 local C = dofile(dir .. '/conky/common.lua')
@@ -26,6 +29,24 @@ end
 
 function conky_status_icon()
   return field(2) == 'Playing' and '▶' or '▮▮'
+end
+
+-- Draw hook for the cover art. Conky's ${image} leaves alpha at 0 on ARGB
+-- windows, so a compositor showed black parts of covers as transparent;
+-- cairo_draw_image writes real alpha.
+function conky_draw_cover()
+  if conky_window == nil or not C.read_snapshot() then return end
+  local img = imlib_load_image(C.cover)
+  if img == nil then return end
+  imlib_context_set_image(img)
+  local w, h = imlib_image_get_width(), imlib_image_get_height()
+  imlib_free_image()
+  if w == 0 or h == 0 then return end
+  local cs = cairo_xlib_surface_create(conky_window.display, conky_window.drawable,
+    conky_window.visual, conky_window.width, conky_window.height)
+  cairo_draw_image(C.cover, cs, conky_window.text_start_x, conky_window.text_start_y,
+    C.COVER_SIZE / w, C.COVER_SIZE / h)
+  cairo_surface_destroy(cs)
 end
 
 local function is_cjk(c)

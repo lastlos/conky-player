@@ -15,7 +15,8 @@ M.viz_off = M.run .. '/viz-off'
 
 -- Vertical space reserved for the text panel above (or below) the visualizer.
 M.PANEL_HEIGHT = 110
--- Horizontal offset of the text next to the 80 px cover art.
+-- Cover art size and the horizontal offset of the text next to it.
+M.COVER_SIZE = 80
 M.TEXT_X = 96
 
 local defaults = {

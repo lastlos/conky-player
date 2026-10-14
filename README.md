@@ -34,7 +34,7 @@ progress line, and gets out of the way when nothing is playing.
 ## Requirements
 
 - An **X11** session (not Wayland, see [Known limitations](#known-limitations))
-- `conky` built with Lua and cairo bindings (`conky-all` on Debian/Ubuntu)
+- `conky` built with Lua, cairo and imlib2 bindings (`conky-all` on Debian/Ubuntu)
 - `playerctl`, `cava`, `wmctrl`, `xprop` and `xwininfo` (`x11-utils`), `curl`, `python3`
 - Fonts: Inter, JetBrains Mono, DejaVu Sans, Noto Sans CJK (all replaceable in
   `settings.conf`)
@@ -190,7 +190,7 @@ conky -c ~/.config/conky-player/conky/panel.conf
 ```
 
 Errors about `cairo_*` functions or `lua_load` mean Conky was built without
-Lua/cairo bindings; install `conky-all`.
+Lua cairo/imlib2 bindings; install `conky-all`.
 
 **Black or opaque background.** Conky needs a compositor for ARGB transparency.
 Most desktops run one; on plain window managers start `picom` first.

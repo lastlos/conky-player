@@ -40,8 +40,9 @@ need_pkg() { [[ " ${missing_pkgs[*]} " == *" $1 "* ]] || missing_pkgs+=("$1"); }
 
 if ! command -v conky >/dev/null; then
   need_pkg conky-all
-elif ! conky -v 2>/dev/null | grep -A5 'Lua bindings' | grep -q Cairo; then
-  echo "conky is installed but lacks Lua/cairo bindings (conky-std is not enough)."
+elif ! conky -v 2>/dev/null | grep -A5 'Lua bindings' | grep -q Cairo ||
+     ! conky -v 2>/dev/null | grep -A5 'Lua bindings' | grep -q Imlib2; then
+  echo "conky is installed but lacks Lua cairo/imlib2 bindings (conky-std is not enough)."
   need_pkg conky-all
 fi
 
