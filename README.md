@@ -87,6 +87,29 @@ compositor time to start, so the transparent windows come up correctly). To
 disable it, delete that file or turn it off in your desktop's "Startup
 Applications".
 
+## Uninstall
+
+Stop the widget, then remove the installed files and the autostart entry:
+
+```sh
+~/.config/conky-player/conky-player.sh stop
+rm -rf ~/.config/conky-player
+rm -f ~/.config/autostart/conky-player.desktop
+```
+
+`stop` also removes the runtime files in `$XDG_RUNTIME_DIR/conky-player`.
+
+Optionally remove the packages you installed only for this widget. Check first
+that nothing else on your system uses them:
+
+```sh
+sudo apt remove conky-all playerctl cava wmctrl
+sudo apt remove fonts-inter fonts-jetbrains-mono fonts-noto-cjk
+```
+
+Leave `curl`, `python3`, `x11-utils` and `fonts-dejavu-core` installed; most
+desktops depend on them.
+
 ## Configuration
 
 Edit `~/.config/conky-player/settings.conf` and run `conky-player.sh restart`.
@@ -159,6 +182,13 @@ The player name is shown without its instance suffix
   drawn. Conky windows sit below all other windows, so this only saves work; it
   does not change what you see.
 
+## Tested on
+
+- Linux Mint 22.3 Cinnamon (X11)
+- Conky 1.19.6 (`conky --version`: `conky 1.19.6 compiled 2024-04-01 for Linux x86_64`)
+- cava 0.7.4 (Ubuntu package `0.7.4-1build2`; this version's `cava -v` prints no
+  version number)
+
 ## Known limitations
 
 - **X11 only.** Window detection uses `wmctrl`, `xprop` and `xwininfo`, and Conky's
@@ -196,7 +226,8 @@ Lua cairo/imlib2 bindings; install `conky-all`.
 Most desktops run one; on plain window managers start `picom` first.
 
 **Visualizer stays empty.** Check that cava works on its own (`cava`). On
-PipeWire make sure `pipewire-pulse` is running, or set `cava_input = pipewire`.
+PipeWire make sure `pipewire-pulse` is running, or (with cava 0.8 or newer) set
+`cava_input = pipewire`.
 
 **Visualizer never shows / is always hidden.** Some window is probably counted as
 covering it, such as a desktop or wallpaper app. Find its class with
