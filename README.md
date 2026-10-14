@@ -5,7 +5,10 @@ It shows whatever is playing in any MPRIS-capable player (Spotify, browsers, mpv
 VLC, Rhythmbox, ...) with cover art, a scrolling title, an audio visualizer and a
 progress line, and gets out of the way when nothing is playing.
 
-![conky-player playing a track](docs/demo.gif)
+<p align="center">
+  <img src="docs/demo-katyusha.gif" width="49%" alt="conky-player scrolling a long Japanese title">
+  <img src="docs/demo-kino.gif" width="49%" alt="conky-player playing a Russian track">
+</p>
 
 ## Features
 
@@ -23,7 +26,10 @@ progress line, and gets out of the way when nothing is playing.
   cannot see it.
 - **One settings file** for position, width, colors, fonts and visualizer.
 
-![conky-player on a desktop](docs/screenshot.png)
+<p align="center">
+  <img src="docs/screenshot.png" width="49%" alt="conky-player screenshot">
+  <img src="docs/screenshot-katyusha.png" width="49%" alt="conky-player with mixed Latin and CJK text">
+</p>
 
 ## Requirements
 
