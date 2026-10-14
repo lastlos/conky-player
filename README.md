@@ -120,7 +120,7 @@ Colors are `#RRGGBB`. Font names are fontconfig family names; list them with
 ```
 playerctl ──> scripts/daemon.sh ──> $XDG_RUNTIME_DIR/conky-player/
                     │                   snapshot   one tab-separated line
-                    │                   cover      cover art image
+                    │                   cover-<id> cover art, one file per art URL
                     │                   viz-off    present while covered / idle
                     └─> cava-run.sh ──> cava       latest cava frame
                                             │

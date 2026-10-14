@@ -9,7 +9,6 @@ M.run = os.getenv('CONKY_PLAYER_RUN')
       .. '/conky-player')
 
 M.snapshot = M.run .. '/snapshot'
-M.cover = M.run .. '/cover'
 M.cava = M.run .. '/cava'
 M.viz_off = M.run .. '/viz-off'
 
@@ -55,7 +54,7 @@ end
 
 -- Snapshot written by scripts/daemon.sh, one tab-separated line:
 --   1 player  2 status  3 title  4 artist  5 position (m:ss)  6 length (m:ss)
---   7 position (us)  8 length (us)  9 art URL
+--   7 position (us)  8 length (us)  9 art URL  10 cover file name in M.run
 function M.read_snapshot()
   local f = io.open(M.snapshot)
   if not f then return nil end
@@ -64,6 +63,13 @@ function M.read_snapshot()
   local fields = {}
   for v in (line .. '\t'):gmatch('([^\t]*)\t') do fields[#fields + 1] = v end
   return fields
+end
+
+-- Path of the cover art named in a snapshot, or nil if there is none.
+function M.cover_path(fields)
+  local name = fields and fields[10] or ''
+  if name == '' or name:find('/', 1, true) then return nil end
+  return M.run .. '/' .. name
 end
 
 -- Base Conky window config; `extra` overrides individual keys.

@@ -35,8 +35,10 @@ end
 -- windows, so a compositor showed black parts of covers as transparent;
 -- cairo_draw_image writes real alpha.
 function conky_draw_cover()
-  if conky_window == nil or not C.read_snapshot() then return end
-  local img = imlib_load_image(C.cover)
+  if conky_window == nil then return end
+  local path = C.cover_path(C.read_snapshot())
+  if not path then return end
+  local img = imlib_load_image(path)
   if img == nil then return end
   imlib_context_set_image(img)
   local w, h = imlib_image_get_width(), imlib_image_get_height()
@@ -44,7 +46,7 @@ function conky_draw_cover()
   if w == 0 or h == 0 then return end
   local cs = cairo_xlib_surface_create(conky_window.display, conky_window.drawable,
     conky_window.visual, conky_window.width, conky_window.height)
-  cairo_draw_image(C.cover, cs, conky_window.text_start_x, conky_window.text_start_y,
+  cairo_draw_image(path, cs, conky_window.text_start_x, conky_window.text_start_y,
     C.COVER_SIZE / w, C.COVER_SIZE / h)
   cairo_surface_destroy(cs)
 end

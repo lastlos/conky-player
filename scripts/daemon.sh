@@ -9,12 +9,11 @@ mkdir -p "$RUN"
 
 SNAP=$RUN/snapshot
 OFF=$RUN/viz-off
-COVER=$RUN/cover
 VIZ=$(setting visualizer yes)
 read -ra IGNORE <<< "$(setting cover_ignore conky)"
 
 declare -A prev
-cur=""; lasturl=""; cx=""; cy=""
+cur=""; lasturl=""; cover=""; cx=""; cy=""
 
 # Centre of the visualizer window, looked up once it exists.
 viz_center() {
@@ -58,19 +57,36 @@ stop_cava() {
   rm -f "$RUN/cava"
 }
 
+# Sets $cover to the file name of the art for URL $1, or "" if there is none.
+# Each URL gets its own name so imlib2's cache can never show a stale cover,
+# and the file is downloaded to .tmp first so Lua never reads a partial one.
 fetch_cover() {
-  local url=$1 path
-  case "$url" in
-    file://*)
-      path=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.unquote(sys.argv[1][7:]))' "$url")
-      cp "$path" "$COVER.tmp" 2>/dev/null ;;
-    http://*|https://*)
-      curl -sfL --max-time 10 "$url" -o "$COVER.tmp" ;;
-    *) false ;;
-  esac && mv "$COVER.tmp" "$COVER" || rm -f "$COVER" "$COVER.tmp"
+  local url=$1 name path
+  cover=""
+  [ -n "$url" ] || return
+  name=cover-$(printf '%s' "$url" | md5sum | cut -c1-16)
+  if [ ! -f "$RUN/$name" ]; then
+    case "$url" in
+      file://*)
+        path=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.unquote(sys.argv[1][7:]))' "$url")
+        cp "$path" "$RUN/$name.tmp" 2>/dev/null ;;
+      http://*|https://*)
+        curl -sfL --max-time 10 "$url" -o "$RUN/$name.tmp" ;;
+      *) false ;;
+    esac && mv "$RUN/$name.tmp" "$RUN/$name" || rm -f "$RUN/$name.tmp"
+  fi
+  [ -f "$RUN/$name" ] && cover=$name
 }
 
-trap 'stop_cava; rm -f "$SNAP" "$COVER" "$OFF"; exit' INT TERM
+# Removes every cover file except $1.
+clean_covers() {
+  local f
+  for f in "$RUN"/cover-*; do
+    [ -e "$f" ] && [ "${f##*/}" != "${1:-}" ] && rm -f "$f"
+  done
+}
+
+trap 'stop_cava; clean_covers; rm -f "$SNAP" "$OFF"; exit' INT TERM
 
 while true; do
   # Pick the active player: one that just started playing wins, then any
@@ -100,14 +116,15 @@ while true; do
 
   if [ -n "$cur" ]; then
     line=$(playerctl -p "$cur" metadata --format $'{{status}}\t{{title}}\t{{artist}}\t{{duration(position)}}\t{{duration(mpris:length)}}\t{{position}}\t{{mpris:length}}\t{{mpris:artUrl}}' 2>/dev/null)
-    # Strip the instance suffix: "chromium.instance1234" -> "chromium".
-    printf '%s\t%s\n' "${cur%%.*}" "$line" > "$SNAP.tmp" && mv "$SNAP.tmp" "$SNAP"
-
-    url=$(cut -f9 "$SNAP")
+    url=${line##*$'\t'}
     if [ "$url" != "$lasturl" ]; then
       lasturl=$url
       fetch_cover "$url"
     fi
+    # Strip the instance suffix: "chromium.instance1234" -> "chromium".
+    printf '%s\t%s\t%s\n' "${cur%%.*}" "$line" "$cover" > "$SNAP.tmp" && mv "$SNAP.tmp" "$SNAP"
+    # Only now that the snapshot names the new cover is the old one unused.
+    clean_covers "$cover"
 
     if covered; then
       touch "$OFF"; stop_cava
@@ -116,7 +133,7 @@ while true; do
       if [ "${now[$cur]}" = Playing ] && [ "$VIZ" = yes ]; then start_cava; else stop_cava; fi
     fi
   else
-    rm -f "$SNAP" "$COVER"; touch "$OFF"; stop_cava; lasturl=""
+    rm -f "$SNAP"; clean_covers; touch "$OFF"; stop_cava; lasturl=""; cover=""
   fi
   # Backgrounded so the TERM trap runs immediately instead of after sleep.
   sleep 1 & wait $!

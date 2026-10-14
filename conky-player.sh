@@ -15,7 +15,7 @@ stop() {
   done
   pkill -f "$DIR/scripts/cava-run.sh" 2>/dev/null
   pkill -f "cava -p $RUN/cava.conf" 2>/dev/null
-  rm -f "$RUN"/snapshot "$RUN"/cover "$RUN"/cava "$RUN"/cava.conf "$RUN"/viz-off
+  rm -f "$RUN"/snapshot "$RUN"/cover-* "$RUN"/cava "$RUN"/cava.conf "$RUN"/viz-off
   rmdir "$RUN" 2>/dev/null
   return 0
 }
