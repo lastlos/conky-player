@@ -28,7 +28,7 @@ progress line, and gets out of the way when nothing is playing.
 
 <p align="center">
   <img src="docs/screenshot.png" width="49%" alt="conky-player screenshot">
-  <img src="docs/screenshot-katyusha.png" width="49%" alt="conky-player with mixed Latin and CJK text">
+  <img src="docs/screenshot-renai.png" width="49%" alt="conky-player with mixed Latin and CJK text">
 </p>
 
 ## Requirements
