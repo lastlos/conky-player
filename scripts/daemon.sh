@@ -1,17 +1,23 @@
 #!/usr/bin/env bash
-D="$HOME/.config/conky-player"
-S=/dev/shm/conky-player.txt
-OFF=/dev/shm/conky-viz-off
+DIR=${CONKY_PLAYER_DIR:-$(cd "$(dirname "$0")/.." && pwd)}
+RUN=${CONKY_PLAYER_RUN:-${XDG_RUNTIME_DIR:-/dev/shm/$USER}/conky-player}
+. "$DIR/scripts/settings.sh"
+mkdir -p "$RUN"
+S=$RUN/snapshot
+OFF=$RUN/viz-off
+COVER=$RUN/cover
+VIZ=$(setting visualizer yes)
+read -ra IGNORE <<< "$(setting cover_ignore 'conky')"
 CX=230; CY=$(( ${VIZ_Y:-150} + 30 ))   # centre of the visualizer window
 declare -A prev
 cur=""; lasturl=""
 
 covered() {
-  local desk id d x y w h cls props
+  local desk id d x y w h cls props i
   desk=$(wmctrl -d | awk '$2=="*"{print $1}')
   while read -r id d x y w h cls _; do
     [ "$d" = "$desk" ] || continue
-    case "${cls,,}" in *hidamari*|*nemo-desktop*|*conky*) continue ;; esac
+    for i in "${IGNORE[@]}"; do [[ ${cls,,} == *"${i,,}"* ]] && continue 2; done
     (( CX >= x && CX < x + w && CY >= y && CY < y + h )) || continue
     props=$(xprop -id "$id" _NET_WM_STATE _NET_WM_WINDOW_TYPE 2>/dev/null)
     [[ $props == *HIDDEN* ]] && continue
@@ -21,8 +27,8 @@ covered() {
   return 1
 }
 stop_cava() {
-  pkill -f "$D/scripts/cava-run.sh"; pkill -f "cava -p $D/scripts/cava.conf"
-  rm -f /dev/shm/cava.txt
+  pkill -f "$DIR/scripts/cava-run.sh"; pkill -f "cava -p $RUN/cava.conf"
+  rm -f "$RUN/cava"
 }
 
 while true; do
@@ -57,15 +63,17 @@ while true; do
     if [ "$url" != "$lasturl" ]; then
       lasturl=$url
       case "$url" in
-        file://*) cp "$(python3 -c 'import sys,urllib.parse;print(urllib.parse.unquote(sys.argv[1][7:]))' "$url")" /tmp/conky-cover 2>/dev/null ;;
-        http*)    curl -sL "$url" -o /tmp/conky-cover ;;
-        *)        rm -f /tmp/conky-cover ;;
+        file://*) cp "$(python3 -c 'import sys,urllib.parse;print(urllib.parse.unquote(sys.argv[1][7:]))' "$url")" "$COVER" 2>/dev/null ;;
+        http*)    curl -sL "$url" -o "$COVER" ;;
+        *)        rm -f "$COVER" ;;
       esac
     fi
 
     if [ "${now[$cur]}" = Playing ] && ! covered; then
       rm -f "$OFF"
-      pgrep -f "cava -p $D/scripts/cava.conf" >/dev/null || setsid -f "$D/scripts/cava-run.sh" >/dev/null 2>&1
+      if [ "$VIZ" = yes ]; then
+        pgrep -f "cava -p $RUN/cava.conf" >/dev/null || setsid -f "$DIR/scripts/cava-run.sh" >/dev/null 2>&1
+      fi
     elif covered; then
       touch "$OFF"; stop_cava
     else

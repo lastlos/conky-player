@@ -1,20 +1,17 @@
 require 'cairo'
 
+local dir = os.getenv('CONKY_PLAYER_DIR') or (os.getenv('HOME') .. '/.config/conky-player')
+local C = dofile(dir .. '/conky/common.lua')
+
+-- Scratch surface used only to measure text.
 local mcs = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 10, 10)
 local mcr = cairo_create(mcs)
 local mq = {}
-local BASE_FONT, CJK_FONT = 'Inter', 'Noto Sans CJK JP'
+local BASE_FONT, CJK_FONT = C.settings.font, C.settings.font_cjk
 
 local function field(n)
-  local f = io.open('/dev/shm/conky-player.txt')
-  if not f then return '' end
-  local line = f:read('*l') or ''; f:close()
-  local i = 0
-  for v in (line .. '\t'):gmatch('([^\t]*)\t') do
-    i = i + 1
-    if i == n then return v end
-  end
-  return ''
+  local fields = C.read_snapshot()
+  return fields and fields[n] or ''
 end
 
 local function is_cjk(c)

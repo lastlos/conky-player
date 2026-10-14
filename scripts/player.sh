@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-S=/dev/shm/conky-player.txt
+S=${CONKY_PLAYER_RUN:-${XDG_RUNTIME_DIR:-/dev/shm/$USER}/conky-player}/snapshot
 f() { [ -f "$S" ] && cut -f"$1" "$S"; }
 marquee() {
   local s="$1" w=$2 L=${#1}

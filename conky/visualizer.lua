@@ -1,25 +1,26 @@
 require 'cairo'
 pcall(require, 'cairo_xlib')
 
-local R, G, B = 0.89, 0.745, 0.549   -- #E3BE8C
-local VH = 50
+local dir = os.getenv('CONKY_PLAYER_DIR') or (os.getenv('HOME') .. '/.config/conky-player')
+local C = dofile(dir .. '/conky/common.lua')
+
+local R, G, B = C.rgb(C.settings.color_accent)
+local VH = C.settings.viz_height
 local active, pct, last = false, 0, -1
 
+-- Re-read the snapshot at most once a second; the daemon does not write faster.
 local function update()
   local t = os.time()
   if t == last then return end
   last = t
   active, pct = false, 0
-  local off = io.open("/dev/shm/conky-viz-off")
+  local off = io.open(C.viz_off)
   if off then off:close(); return end
-  local f = io.open("/dev/shm/conky-player.txt")
-  if not f then return end
-  local line = f:read("*l") or ""; f:close()
-  local fields = {}
-  for v in (line .. "\t"):gmatch("([^\t]*)\t") do fields[#fields + 1] = v end
+  local fields = C.read_snapshot()
+  if not fields then return end
   local pos, len = tonumber(fields[7]), tonumber(fields[8])
   active = true
-  pct = (pos and len and len > 0) and pos / len or 0
+  pct = (pos and len and len > 0) and math.min(1, pos / len) or 0
 end
 
 function conky_draw()
@@ -31,7 +32,7 @@ function conky_draw()
     conky_window.visual, W, conky_window.height)
   local cr = cairo_create(cs)
 
-  local f = io.open('/dev/shm/cava.txt')
+  local f = io.open(C.cava)
   if f then
     local line = f:read('*l'); f:close()
     local vals = {}
