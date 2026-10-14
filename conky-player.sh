@@ -8,6 +8,11 @@ export CONKY_PLAYER_DIR=$DIR CONKY_PLAYER_RUN=$RUN
 stop() {
   pkill -f "conky .*-c $DIR/conky/" 2>/dev/null
   pkill -f "$DIR/scripts/daemon.sh" 2>/dev/null
+  # Wait for the daemon's cleanup so a restart does not race with it.
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    pgrep -f "$DIR/scripts/daemon.sh" >/dev/null || break
+    sleep 0.2
+  done
   pkill -f "$DIR/scripts/cava-run.sh" 2>/dev/null
   pkill -f "cava -p $RUN/cava.conf" 2>/dev/null
   rm -f "$RUN"/snapshot "$RUN"/cover "$RUN"/cava "$RUN"/cava.conf "$RUN"/viz-off

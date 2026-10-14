@@ -118,5 +118,6 @@ while true; do
   else
     rm -f "$SNAP" "$COVER"; touch "$OFF"; stop_cava; lasturl=""
   fi
-  sleep 1
+  # Backgrounded so the TERM trap runs immediately instead of after sleep.
+  sleep 1 & wait $!
 done
