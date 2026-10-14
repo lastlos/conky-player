@@ -5,7 +5,7 @@ It shows whatever is playing in any MPRIS-capable player (Spotify, browsers, mpv
 VLC, Rhythmbox, ...) with cover art, a scrolling title, an audio visualizer and a
 progress line, and gets out of the way when nothing is playing.
 
-![conky-player screenshot](docs/screenshot.png)
+![conky-player playing a track](docs/demo.gif)
 
 ## Features
 
@@ -22,6 +22,8 @@ progress line, and gets out of the way when nothing is playing.
   (and cava itself) stops while a window covers it, so it costs no CPU when you
   cannot see it.
 - **One settings file** for position, width, colors, fonts and visualizer.
+
+![conky-player on a desktop](docs/screenshot.png)
 
 ## Requirements
 
