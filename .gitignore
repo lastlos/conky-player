@@ -1,0 +1,7 @@
+# Backups and editor files
+*.yedek*
+*.bak
+*.orig
+*~
+*.swp
+.directory
