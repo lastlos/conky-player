@@ -14,6 +14,20 @@ local function field(n)
   return fields and fields[n] or ''
 end
 
+-- ${lua state}: 'on' while the daemon publishes a player, else 'off'.
+function conky_state()
+  return C.read_snapshot() and 'on' or 'off'
+end
+
+-- ${lua field N}: snapshot field N as plain text (not parsed by Conky).
+function conky_field(n)
+  return field(tonumber(n))
+end
+
+function conky_status_icon()
+  return field(2) == 'Playing' and '▶' or '▮▮'
+end
+
 local function is_cjk(c)
   return (c >= 0x3000 and c <= 0x9FFF) or (c >= 0xAC00 and c <= 0xD7AF)
       or (c >= 0xF900 and c <= 0xFAFF) or (c >= 0xFF00 and c <= 0xFFEF)
@@ -75,7 +89,10 @@ local function render(st, i, j, bold, size)
   return res
 end
 
-function conky_pmarq(n, bold, pt, maxw)
+-- ${lua_parse marquee N BOLD PT MAXW}: snapshot field N in a MAXW px wide
+-- box, scrolling back and forth when it does not fit. BOLD is 1 or 0, PT the
+-- font size. CJK runs switch to font_cjk with a baseline correction.
+function conky_marquee(n, bold, pt, maxw)
   n, bold, maxw = tonumber(n), bold == '1', tonumber(maxw)
   local size = tonumber(pt)
   local px = size * 96 / 72
