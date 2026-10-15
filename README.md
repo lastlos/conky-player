@@ -8,6 +8,8 @@ progress line, and gets out of the way when nothing is playing.
 <p align="center">
   <img src="docs/demo-katyusha.gif" width="49%" alt="conky-player scrolling a long Japanese title">
   <img src="docs/demo-kino.gif" width="49%" alt="conky-player playing a Russian track">
+  <img src="docs/demo-arabic.gif" width="49%" alt="conky-player showing an Arabic title right to left">
+  <img src="docs/demo-hebrew.gif" width="49%" alt="conky-player showing a Yiddish title in Hebrew script (title transliterated for the demo)">
 </p>
 
 ## Features
