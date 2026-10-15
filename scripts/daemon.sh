@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Polls MPRIS players once a second and publishes the active one for the
-# Conky windows: a snapshot line, the cover art, cava frames and a flag that
-# hides the visualizer while a window covers it.
+# Conky windows: a snapshot line, the cover art, the player name, title and
+# artist rendered by Pango, cava frames and a flag that hides the visualizer
+# while a window covers it.
 DIR=${CONKY_PLAYER_DIR:-$(cd "$(dirname "$0")/.." && pwd)}
 RUN=${CONKY_PLAYER_RUN:-${XDG_RUNTIME_DIR:-/dev/shm/$USER}/conky-player}
 . "$DIR/scripts/settings.sh"
@@ -11,9 +12,14 @@ SNAP=$RUN/snapshot
 OFF=$RUN/viz-off
 VIZ=$(setting visualizer yes)
 read -ra IGNORE <<< "$(setting cover_ignore conky)"
+FONTS="$(setting font Inter), $(setting font_cjk 'Noto Sans CJK JP')"
+COLOR_TEXT=$(setting color_text '#E6DFD3')
+COLOR_ACCENT=$(setting color_accent '#E3BE8C')
+COLOR_DIM=$(setting color_dim '#9A9488')
 
 declare -A prev
 cur=""; lasturl=""; cover=""; cx=""; cy=""
+lasttext=""; texts=("" "" "")
 
 # Centre of the visualizer window, looked up once it exists.
 viz_center() {
@@ -79,14 +85,29 @@ fetch_cover() {
 }
 
 # Removes every cover file except $1.
-clean_covers() {
-  local f
-  for f in "$RUN"/cover-*; do
-    [ -e "$f" ] && [ "${f##*/}" != "${1:-}" ] && rm -f "$f"
+# Renders player name, title and artist to PNGs with Pango (scripts/
+# render-text.py) and sets ${texts[@]} to their file names. Without
+# python3-gi the names stay empty and the panel falls back to plain text.
+render_texts() {
+  local out
+  out=$(python3 "$DIR/scripts/render-text.py" "$RUN" \
+    "$1" "$FONTS 9" "$COLOR_DIM" \
+    "$2" "$FONTS Bold 12" "$COLOR_ACCENT" \
+    "$3" "$FONTS 11" "$COLOR_TEXT" 2>/dev/null)
+  mapfile -t texts <<< "$out"
+}
+
+# Removes every cover and text image except the file names given.
+clean_files() {
+  local f k
+  for f in "$RUN"/cover-* "$RUN"/text-*; do
+    [ -e "$f" ] || continue
+    for k in "$@"; do [ "${f##*/}" = "$k" ] && continue 2; done
+    rm -f "$f"
   done
 }
 
-trap 'stop_cava; clean_covers; rm -f "$SNAP" "$OFF"; exit' INT TERM
+trap 'stop_cava; clean_files; rm -f "$SNAP" "$OFF"; exit' INT TERM
 
 while true; do
   # Pick the active player: one that just started playing wins, then any
@@ -122,9 +143,17 @@ while true; do
       fetch_cover "$url"
     fi
     # Strip the instance suffix: "chromium.instance1234" -> "chromium".
-    printf '%s\t%s\t%s\n' "${cur%%.*}" "$line" "$cover" > "$SNAP.tmp" && mv "$SNAP.tmp" "$SNAP"
-    # Only now that the snapshot names the new cover is the old one unused.
-    clean_covers "$cover"
+    name=${cur%%.*}
+    rest=${line#*$'\t'}; title=${rest%%$'\t'*}
+    rest=${rest#*$'\t'}; artist=${rest%%$'\t'*}
+    if [ "$name"$'\t'"$title"$'\t'"$artist" != "$lasttext" ]; then
+      lasttext=$name$'\t'$title$'\t'$artist
+      render_texts "$name" "$title" "$artist"
+    fi
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$name" "$line" "$cover" \
+      "${texts[0]:-}" "${texts[1]:-}" "${texts[2]:-}" > "$SNAP.tmp" && mv "$SNAP.tmp" "$SNAP"
+    # Only now that the snapshot names the new files are the old ones unused.
+    clean_files "$cover" "${texts[@]}"
 
     if covered; then
       touch "$OFF"; stop_cava
@@ -133,7 +162,8 @@ while true; do
       if [ "${now[$cur]}" = Playing ] && [ "$VIZ" = yes ]; then start_cava; else stop_cava; fi
     fi
   else
-    rm -f "$SNAP"; clean_covers; touch "$OFF"; stop_cava; lasturl=""; cover=""
+    rm -f "$SNAP"; clean_files; touch "$OFF"; stop_cava
+    lasturl=""; cover=""; lasttext=""; texts=("" "" "")
   fi
   # Backgrounded so the TERM trap runs immediately instead of after sleep.
   sleep 1 & wait $!

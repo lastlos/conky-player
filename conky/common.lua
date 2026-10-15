@@ -54,7 +54,11 @@ end
 
 -- Snapshot written by scripts/daemon.sh, one tab-separated line:
 --   1 player  2 status  3 title  4 artist  5 position (m:ss)  6 length (m:ss)
---   7 position (us)  8 length (us)  9 art URL  10 cover file name in M.run
+--   7 position (us)  8 length (us)  9 art URL
+-- File names in M.run (empty if missing):
+--   10 cover art  11 player name  12 title  13 artist
+-- 11-13 are PNGs rendered by scripts/render-text.py, named
+-- text-<hash>-b<baseline px>[.rtl].png.
 function M.read_snapshot()
   local f = io.open(M.snapshot)
   if not f then return nil end
@@ -65,9 +69,9 @@ function M.read_snapshot()
   return fields
 end
 
--- Path of the cover art named in a snapshot, or nil if there is none.
-function M.cover_path(fields)
-  local name = fields and fields[10] or ''
+-- Path of the runtime file named in snapshot field n, or nil if there is none.
+function M.run_file(fields, n)
+  local name = fields and fields[n] or ''
   if name == '' or name:find('/', 1, true) then return nil end
   return M.run .. '/' .. name
 end
