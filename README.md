@@ -15,11 +15,14 @@ progress line, and gets out of the way when nothing is playing.
 - **Any MPRIS player** via `playerctl`; picks the right one automatically when
   several are open (see [Player selection](#player-selection)).
 - **Cover art** from `file://` and `http(s)://` art URLs.
-- **Pixel-accurate marquee**: titles and artists that do not fit are measured with
-  cairo and scroll back and forth; short ones stay still.
-- **CJK fallback**: Chinese, Japanese and Korean characters are rendered with
-  Noto Sans CJK while the rest of the line keeps the main font, with the baseline
-  corrected so mixed lines do not jump.
+- **Every script**: player name, title and artist are rendered with Pango, so
+  Arabic and Hebrew run right to left with joined letters, Devanagari and other
+  Indic scripts get their conjuncts, and Chinese, Japanese and Korean mix with
+  Latin on one baseline. Characters the main font lacks fall back to other
+  installed fonts.
+- **Smooth marquee**: titles and artists that do not fit scroll back and forth
+  pixel by pixel; right-to-left text starts at its right end. Short ones stay
+  still.
 - **cava visualizer** and a **progress line** drawn with cairo in a second window.
 - **Auto-hide**: the panel disappears when no player is active, and the visualizer
   (and cava itself) stops while a window covers it, so it costs no CPU when you
@@ -36,6 +39,9 @@ progress line, and gets out of the way when nothing is playing.
 - An **X11** session (not Wayland, see [Known limitations](#known-limitations))
 - `conky` built with Lua, cairo and imlib2 bindings (`conky-all` on Debian/Ubuntu)
 - `playerctl`, `cava`, `wmctrl`, `xprop` and `xwininfo` (`x11-utils`), `curl`, `python3`
+- Python Pango bindings (`python3-gi`, `python3-gi-cairo`, `gir1.2-pango-1.0`;
+  preinstalled on most GNOME, Cinnamon and MATE desktops). Without them titles
+  fall back to plain text with no shaping or font fallback.
 - Fonts: Inter, JetBrains Mono, DejaVu Sans, Noto Sans CJK (all replaceable in
   `settings.conf`)
 
@@ -43,7 +49,15 @@ On Debian, Ubuntu, Mint and derivatives:
 
 ```sh
 sudo apt install conky-all playerctl cava wmctrl x11-utils curl python3 \
+  python3-gi python3-gi-cairo gir1.2-pango-1.0 \
   fonts-inter fonts-jetbrains-mono fonts-dejavu-core fonts-noto-cjk
+```
+
+For titles in Arabic, Hebrew, Devanagari, Thai and other scripts you also need a
+font that covers them; `fonts-noto-core` covers most:
+
+```sh
+sudo apt install fonts-noto-core
 ```
 
 `install.sh` checks all of these and prints the exact command for whatever is
@@ -104,11 +118,11 @@ that nothing else on your system uses them:
 
 ```sh
 sudo apt remove conky-all playerctl cava wmctrl
-sudo apt remove fonts-inter fonts-jetbrains-mono fonts-noto-cjk
+sudo apt remove fonts-inter fonts-jetbrains-mono fonts-noto-cjk fonts-noto-core
 ```
 
-Leave `curl`, `python3`, `x11-utils` and `fonts-dejavu-core` installed; most
-desktops depend on them.
+Leave `curl`, `python3`, the Python Pango bindings, `x11-utils` and
+`fonts-dejavu-core` installed; most desktops depend on them.
 
 ## Configuration
 
@@ -127,7 +141,7 @@ One `key = value` per line; lines starting with `#` are comments.
 | `font`         | `Inter`            | main font                                                |
 | `font_mono`    | `JetBrains Mono`   | play time                                                |
 | `font_symbol`  | `DejaVu Sans`      | play/pause symbol                                        |
-| `font_cjk`     | `Noto Sans CJK JP` | Chinese/Japanese/Korean characters                       |
+| `font_cjk`     | `Noto Sans CJK JP` | first fallback for characters `font` lacks (picks the CJK style) |
 | `visualizer`   | `yes`              | `no` never starts cava; only the progress line is drawn  |
 | `viz_height`   | `50`               | height of the visualizer bars (px)                       |
 | `viz_bars`     | `32`               | number of bars                                           |
@@ -144,16 +158,23 @@ Colors are `#RRGGBB`. Font names are fontconfig family names; list them with
 playerctl ──> scripts/daemon.sh ──> $XDG_RUNTIME_DIR/conky-player/
                     │                   snapshot   one tab-separated line
                     │                   cover-<id> cover art, one file per art URL
+                    │                   text-<id>  name, title, artist as PNGs
                     │                   viz-off    present while covered / idle
+                    ├─> render-text.py  (Pango, once per track)
                     └─> cava-run.sh ──> cava       latest cava frame
                                             │
-          conky/panel.conf + panel.lua <────┤  text panel (0.5 s refresh)
+          conky/panel.conf + panel.lua <────┤  text panel (0.2 s refresh)
   conky/visualizer.conf + visualizer.lua <──┘  bars + progress (viz_fps)
 ```
 
 `daemon.sh` polls once a second and is the only process that talks to
 `playerctl`; the two Conky windows just read files from the runtime directory
 (a tmpfs), so they stay cheap even at 60 fps.
+
+Conky's own text cannot shape complex scripts or fall back to other fonts, so
+when the player, title or artist changes the daemon has `render-text.py` draw
+them once with Pango into transparent PNGs. The panel only scrolls and paints
+those images.
 
 ### Player selection
 
@@ -196,11 +217,10 @@ The player name is shown without its instance suffix
   (XWayland is not enough to see other windows).
 - **cava shows system-wide audio**, not the selected player. Notification sounds
   or a second player will show up in the bars.
-- **CJK handling is per glyph by Unicode range** (CJK symbols, kana, CJK
-  ideographs, Hangul, compatibility ideographs, full-width forms). Other scripts
-  that the main font lacks (emoji, Arabic, Thai, ...) rely on Conky's normal font
-  fallback and are not baseline-corrected; complex-script shaping across font runs
-  is not supported.
+- **Right-to-left titles are left-aligned** like the rest of the panel; only
+  their scrolling starts from the right.
+- **Color emoji** depend on the installed emoji font and may render in
+  monochrome or not at all.
 - **Coverage is checked at a single point** (the visualizer's centre), so a
   window covering only part of it is ignored.
 - **Fixed panel height.** The visualizer is placed 110 px from the panel; much
@@ -233,8 +253,13 @@ PipeWire make sure `pipewire-pulse` is running, or (with cava 0.8 or newer) set
 covering it, such as a desktop or wallpaper app. Find its class with
 `wmctrl -lx` and add it to `cover_ignore`.
 
-**Boxes instead of Chinese/Japanese/Korean text.** Install `fonts-noto-cjk` or set
-`font_cjk` to a CJK font you have (`fc-list :lang=ja family`).
+**Boxes instead of letters.** No installed font has those characters. Install
+`fonts-noto-cjk` for Chinese, Japanese and Korean and `fonts-noto-core` for most
+other scripts; `fc-list :lang=ar family` lists fonts for a language (here Arabic).
+
+**Arabic letters not joined, or Hindi letters broken apart.** The Python Pango
+bindings are missing and the panel fell back to plain text. Install
+`python3-gi python3-gi-cairo gir1.2-pango-1.0` and restart.
 
 **Wrong player is shown.** The newest player to start playing wins; pause it, or
 see `playerctl -l` for what the daemon sees.

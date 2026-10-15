@@ -5,3 +5,6 @@
 *~
 *.swp
 .directory
+
+# Python bytecode
+__pycache__/

@@ -51,6 +51,14 @@ for cmd in playerctl:playerctl cava:cava wmctrl:wmctrl xprop:x11-utils \
   command -v "${cmd%%:*}" >/dev/null || need_pkg "${cmd#*:}"
 done
 
+# Pango renders titles in every script; without it they fall back to plain
+# text with no shaping or font fallback.
+if command -v python3 >/dev/null && ! python3 -c "import cairo, gi
+gi.require_version('PangoCairo', '1.0')
+from gi.repository import PangoCairo" 2>/dev/null; then
+  need_pkg python3-gi; need_pkg python3-gi-cairo; need_pkg gir1.2-pango-1.0
+fi
+
 # Check the fonts named in the settings that will be used.
 settings_file=$DEST/settings.conf
 [ -f "$settings_file" ] || settings_file=$SRC/settings.conf
@@ -72,10 +80,17 @@ if [ ${#missing_pkgs[@]} -gt 0 ] || [ ${#missing_other[@]} -gt 0 ]; then
   echo "Missing dependencies:"
   [ ${#missing_pkgs[@]} -gt 0 ] && echo "  sudo apt install ${missing_pkgs[*]}"
   for m in "${missing_other[@]}"; do echo "  $m (install it or change settings.conf)"; done
-  echo "Installing anyway; the widget will not work until these are present."
+  echo "Installing anyway; install these for the widget to work fully."
   echo
 else
   echo "All dependencies found."
+fi
+
+# Titles in other scripts need a font that has them; Noto covers most.
+if ! fc-list :lang=ar 2>/dev/null | grep -q . || ! fc-list :lang=hi 2>/dev/null | grep -q .; then
+  echo "Optional: for Arabic, Hebrew, Devanagari and other scripts install"
+  echo "  sudo apt install fonts-noto-core"
+  echo
 fi
 
 if [ "${XDG_SESSION_TYPE:-}" = wayland ]; then
@@ -92,7 +107,8 @@ else
   mkdir -p "$DEST/conky" "$DEST/scripts"
   install -m 755 "$SRC/conky-player.sh" "$DEST/"
   install -m 644 "$SRC"/conky/*.lua "$SRC"/conky/*.conf "$DEST/conky/"
-  install -m 755 "$SRC/scripts/daemon.sh" "$SRC/scripts/cava-run.sh" "$DEST/scripts/"
+  install -m 755 "$SRC/scripts/daemon.sh" "$SRC/scripts/cava-run.sh" \
+    "$SRC/scripts/render-text.py" "$DEST/scripts/"
   install -m 644 "$SRC/scripts/settings.sh" "$DEST/scripts/"
   if [ -f "$DEST/settings.conf" ]; then
     echo "Kept existing $DEST/settings.conf (defaults are in $SRC/settings.conf)."
